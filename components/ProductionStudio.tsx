@@ -3,9 +3,10 @@ import type { GenerateVideosOperation } from '@google/genai';
 import { StoryboardPanelData, ImageData } from '../types';
 import { useTranslations } from '../lib/i18n';
 import { useSystemPrompts } from '../lib/SystemPromptsContext';
-import { startVideoGeneration, checkVideoStatus, generateMusic } from '../services/geminiService';
+import { startVideoGeneration, checkVideoStatus } from '../services/geminiService';
+import { LyriaMusicSessionManager } from '../lib/LyriaMusicSession';
 import { VIDEO_GENERATION_MESSAGES, VIDEO_MODELS, VIDEO_MODEL } from '../constants';
-import { FilmIcon, RefreshIcon, MusicIcon, UploadIcon } from './common/Icons';
+import { FilmIcon, RefreshIcon, MusicIcon, UploadIcon, PlayIcon, PauseIcon, StopIcon } from './common/Icons';
 
 interface ProductionStudioProps {
   initialPanels: StoryboardPanelData[];
@@ -22,26 +23,54 @@ const MusicAssistant: React.FC<{
     const { t } = useTranslations();
     const { prompts } = useSystemPrompts();
     const [musicPrompt, setMusicPrompt] = useState(panel.musicPrompt || '');
-    const [isMusicGenerating, setIsMusicGenerating] = useState(false);
+    const [musicStatus, setMusicStatus] = useState<'idle' | 'playing' | 'paused' | 'stopping' | 'error'>('idle');
+
+    const lyriaSession = useRef<LyriaMusicSessionManager | null>(null);
 
     useEffect(() => {
         setMusicPrompt(panel.musicPrompt || '');
-    }, [panel.id, panel.musicPrompt]);
+        // When the panel changes, ensure we clean up any existing session
+        return () => {
+            lyriaSession.current?.close();
+            lyriaSession.current = null;
+        };
+    }, [panel.id]);
 
-    const handleGenerateMusic = async () => {
-        if (!musicPrompt) return;
-        setIsMusicGenerating(true);
-        updatePanel(panel.id, { status: 'music-generating', musicUrl: undefined });
+    const handlePlayPause = async () => {
+        if (!lyriaSession.current) {
+            lyriaSession.current = new LyriaMusicSessionManager();
+            await lyriaSession.current.connect();
+        }
+
+        if (musicStatus === 'playing') {
+            await lyriaSession.current.pause();
+            setMusicStatus('paused');
+        } else {
+            await lyriaSession.current.setPrompts([{ text: musicPrompt, weight: 1.0 }]);
+            await lyriaSession.current.play();
+            setMusicStatus('playing');
+            updatePanel(panel.id, { status: 'music-generating', musicUrl: undefined });
+        }
+    };
+
+    const handleStop = async () => {
+        if (!lyriaSession.current) return;
+        setMusicStatus('stopping');
         try {
-            const musicUrl = await generateMusic(musicPrompt, prompts.music);
+            const musicUrl = await lyriaSession.current.stop();
             updatePanel(panel.id, { status: 'complete', musicUrl: musicUrl, musicPrompt: musicPrompt });
+            setMusicStatus('idle');
         } catch (err) {
             console.error("Music generation failed", err);
             updatePanel(panel.id, { status: 'error', errorMessage: t('errorGenerateMusic') });
+            setMusicStatus('error');
         } finally {
-            setIsMusicGenerating(false);
+            lyriaSession.current.close();
+            lyriaSession.current = null;
         }
     };
+
+    const isMusicActionInProgress = musicStatus === 'playing' || musicStatus === 'stopping';
 
     return (
         <div className="bg-gray-800/50 rounded-lg p-4 sticky top-28">
@@ -55,24 +84,31 @@ const MusicAssistant: React.FC<{
                         onChange={e => setMusicPrompt(e.target.value)}
                         onBlur={() => updatePanel(panel.id, { musicPrompt: musicPrompt })}
                         rows={4}
-                        disabled={isDisabled || isMusicGenerating}
+                        disabled={isDisabled || isMusicActionInProgress}
                         placeholder={t('musicPromptPlaceholder')}
                         className="w-full bg-gray-900 border border-gray-700 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm resize-y"
                     />
                 </div>
-                <button
-                    onClick={handleGenerateMusic}
-                    disabled={isDisabled || isMusicGenerating || !musicPrompt}
-                    className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-md transition-colors disabled:bg-pink-900 disabled:text-gray-400"
-                >
-                    {isMusicGenerating ? (
-                        <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-                    ) : (
-                        panel.musicUrl ? <RefreshIcon className="h-5 w-5" /> : <MusicIcon className="h-5 w-5" />
-                    )}
-                    {panel.musicUrl ? t('regenerateMusic') : t('generateMusic')}
-                </button>
-                {panel.musicUrl && !isMusicGenerating && (
+                <div className="flex gap-2">
+                    <button
+                        onClick={handlePlayPause}
+                        disabled={isDisabled || !musicPrompt || musicStatus === 'stopping'}
+                        className="flex-1 flex items-center justify-center gap-2 py-2 px-4 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-md transition-colors disabled:bg-pink-900 disabled:text-gray-400"
+                    >
+                        {musicStatus === 'playing' ? <PauseIcon /> : <PlayIcon />}
+                        {musicStatus === 'playing' ? t('pauseMusic') : t('playMusic')}
+                    </button>
+                    <button
+                        onClick={handleStop}
+                        disabled={isDisabled || musicStatus === 'idle' || musicStatus === 'stopping'}
+                        className="flex-1 flex items-center justify-center gap-2 py-2 px-4 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-md transition-colors disabled:bg-gray-800"
+                    >
+                        <StopIcon />
+                        {t('stopMusic')}
+                    </button>
+                </div>
+
+                {panel.musicUrl && musicStatus === 'idle' && (
                     <div className="mt-2">
                         <audio key={panel.musicUrl} controls src={panel.musicUrl} className="w-full h-10">
                             {t('audioPlayerNotSupported')}

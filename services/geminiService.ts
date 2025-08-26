@@ -213,16 +213,3 @@ export const generateTTS = async (text: string, voice: string, promptTemplate: s
 
     return pcmToWavDataUrl(base64Pcm);
 };
-
-// Simulates music generation as there is no public "Liria" API.
-// Returns a short, silent audio clip to allow the UI workflow to function.
-export const generateMusic = (prompt: string, promptTemplate: string): Promise<string> => {
-    console.log("Simulating music generation for prompt:", promptTemplate.replace('{{prompt}}', prompt));
-    return new Promise(resolve => {
-        setTimeout(() => {
-            // This is a base64 encoded 2-second silent WAV file.
-            const silentWav = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
-            resolve(silentWav);
-        }, 3000); // Simulate a 3-second generation time
-    });
-};
