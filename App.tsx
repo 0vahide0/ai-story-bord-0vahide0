@@ -6,7 +6,7 @@ import IdeaInput from './components/IdeaInput';
 import StoryboardView from './components/StoryboardView';
 import StructureEditor from './components/StructureEditor';
 import ProductionStudio from './components/ProductionStudio';
-import { LogoIcon, CogIcon } from './components/common/Icons';
+import { CogIcon } from './components/common/Icons';
 import { LanguageProvider, LanguageContext, useTranslations } from './lib/i18n';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import { SystemPromptsProvider, useSystemPrompts } from './lib/SystemPromptsContext';
@@ -147,27 +147,15 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-200 font-sans antialiased">
-      <header className="py-4 px-6 md:px-8 border-b border-gray-700/50 sticky top-0 bg-gray-900/80 backdrop-blur-sm z-20">
+    <div className="font-sans antialiased">
+      <header className="py-4 px-6 md:px-8 border-b border-gray-700/50 sticky top-0 z-20">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <LogoIcon />
-            <h1 className="text-2xl font-bold tracking-tighter text-white">{t('appTitle')}</h1>
+            <img src="https://cdn2.magiclight.ai/assets/logo-icon.png" alt="Magic Light AI" className="h-8 w-8" />
+            <h1 className="text-2xl font-bold tracking-tighter">Magic Light AI</h1>
           </div>
           <div className="flex items-center gap-4">
-            <Stepper 
-                currentStep={currentStep} 
-                highestStep={highestStep}
-                onStepClick={handleStepClick}
-            />
-            <LanguageSwitcher />
-            <button
-                onClick={() => setIsPromptsSidebarOpen(true)}
-                className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-full transition-colors"
-                aria-label={t('systemPromptsTitle')}
-            >
-                <CogIcon />
-            </button>
+            <button className="arco-btn arco-btn-primary">Log in</button>
           </div>
         </div>
       </header>
