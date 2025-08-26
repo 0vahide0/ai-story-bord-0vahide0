@@ -78,8 +78,26 @@ const StructureEditor: React.FC<StructureEditorProps> = ({ initialStructure, onC
         <p className="text-gray-400 mt-2">{t('structureEditorSubtitle')}</p>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        <div className="flex-grow lg:w-2/3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        <aside className="lg:col-span-1 lg:sticky lg:top-28 h-fit">
+          {selectedSceneIndex !== null ? (
+            <AiWriterAssistant
+              isLoading={isAssistantLoading}
+              onRewrite={() => handleAiAction(rewriteText, prompts.rewrite)}
+              onExpand={() => handleAiAction(expandText, prompts.expand)}
+              onShrink={() => handleAiAction(shrinkText, prompts.shrink)}
+              onChangeTone={(tone) => handleAiAction(changeTone, prompts.changeTone, tone)}
+            />
+          ) : (
+            <div className="bg-gray-800/50 rounded-lg p-6 text-center text-gray-400 border-2 border-dashed border-gray-700 h-full flex flex-col justify-center">
+                <p className="font-semibold">{t('aiAssistant')}</p>
+                <p className="text-sm mt-1">{t('aiAssistantHint')}</p>
+            </div>
+          )}
+        </aside>
+
+        <div className="lg:col-span-2">
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="bg-gray-800/50 p-6 rounded-lg">
               <div>
@@ -156,24 +174,6 @@ const StructureEditor: React.FC<StructureEditorProps> = ({ initialStructure, onC
             </div>
           </form>
         </div>
-
-        <aside className="lg:w-1/3 lg:sticky lg:top-28 h-fit">
-          {selectedSceneIndex !== null ? (
-            <AiWriterAssistant
-              isLoading={isAssistantLoading}
-              onRewrite={() => handleAiAction(rewriteText, prompts.rewrite)}
-              onExpand={() => handleAiAction(expandText, prompts.expand)}
-              onShrink={() => handleAiAction(shrinkText, prompts.shrink)}
-              onChangeTone={(tone) => handleAiAction(changeTone, prompts.changeTone, tone)}
-            />
-          ) : (
-            <div className="bg-gray-800/50 rounded-lg p-6 text-center text-gray-400 border-2 border-dashed border-gray-700 h-full flex flex-col justify-center">
-                <p className="font-semibold">{t('aiAssistant')}</p>
-                <p className="text-sm mt-1">{t('aiAssistantHint')}</p>
-            </div>
-          )}
-        </aside>
-
       </div>
     </div>
   );

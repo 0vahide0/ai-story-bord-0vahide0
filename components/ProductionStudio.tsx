@@ -1,11 +1,11 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import type { GenerateVideosOperation } from '@google/genai';
-import { StoryboardPanelData } from '../types';
+import { StoryboardPanelData, ImageData } from '../types';
 import { useTranslations } from '../lib/i18n';
 import { useSystemPrompts } from '../lib/SystemPromptsContext';
 import { startVideoGeneration, checkVideoStatus, generateMusic } from '../services/geminiService';
-import { VIDEO_GENERATION_MESSAGES } from '../constants';
-import { FilmIcon, RefreshIcon, MusicIcon } from './common/Icons';
+import { VIDEO_GENERATION_MESSAGES, VIDEO_MODELS, VIDEO_MODEL } from '../constants';
+import { FilmIcon, RefreshIcon, MusicIcon, UploadIcon } from './common/Icons';
 
 interface ProductionStudioProps {
   initialPanels: StoryboardPanelData[];
@@ -91,10 +91,13 @@ const ProductionStudio: React.FC<ProductionStudioProps> = ({ initialPanels, onPa
   const [panels, setPanels] = useState(initialPanels);
   const [selectedPanelId, setSelectedPanelId] = useState<string | null>(initialPanels.find(p => p.imageUrl)?.id || null);
   const [editableVideoPrompt, setEditableVideoPrompt] = useState('');
+  const [selectedVideoModel, setSelectedVideoModel] = useState<string>(VIDEO_MODEL);
+  const [uploadedImageData, setUploadedImageData] = useState<ImageData | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStatus, setGenerationStatus] = useState('');
   const [generationError, setGenerationError] = useState<string | null>(null);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const messageIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -124,6 +127,21 @@ const ProductionStudio: React.FC<ProductionStudioProps> = ({ initialPanels, onPa
     return cleanupIntervals;
   }, []);
 
+  const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const base64String = (reader.result as string).split(',')[1];
+            setUploadedImageData({
+                imageBytes: base64String,
+                mimeType: file.type,
+            });
+        };
+        reader.readAsDataURL(file);
+    }
+  };
+
   const handleGenerateVideo = useCallback(async () => {
     if (!selectedPanelId || !editableVideoPrompt) return;
     
@@ -139,7 +157,7 @@ const ProductionStudio: React.FC<ProductionStudioProps> = ({ initialPanels, onPa
     }, 4000);
 
     try {
-      let operation = await startVideoGeneration(editableVideoPrompt, prompts.video);
+      let operation = await startVideoGeneration(editableVideoPrompt, prompts.video, selectedVideoModel, uploadedImageData || undefined);
       updatePanel(selectedPanelId, { videoOperation: operation });
 
       const poll = async () => {
@@ -185,7 +203,7 @@ const ProductionStudio: React.FC<ProductionStudioProps> = ({ initialPanels, onPa
         setGenerationError(errorMsg);
         updatePanel(selectedPanelId, { status: 'error', errorMessage: errorMsg });
     }
-  }, [selectedPanelId, editableVideoPrompt, updatePanel, prompts.video, t]);
+  }, [selectedPanelId, editableVideoPrompt, updatePanel, prompts.video, t, selectedVideoModel, uploadedImageData]);
 
   return (
     <div className="animate-fade-in">
@@ -228,11 +246,39 @@ const ProductionStudio: React.FC<ProductionStudioProps> = ({ initialPanels, onPa
                                     <p className="mt-4 font-semibold">{t('videoGenerationStatus')}</p>
                                     <p className="text-gray-400 text-sm">{generationStatus}</p>
                                 </div>
+                           ) : uploadedImageData ? (
+                                <img src={`data:${uploadedImageData.mimeType};base64,${uploadedImageData.imageBytes}`} alt="Uploaded preview" className="w-full h-full object-cover" />
                            ) : (
                              <img src={selectedPanel.imageUrl} alt={`Scene ${selectedPanel.sceneNumber}`} className="w-full h-full object-cover" />
                            )}
                         </div>
                         
+                        <div className="flex items-center gap-4">
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleImageFileChange}
+                                accept="image/*"
+                                className="hidden"
+                            />
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={isGenerating}
+                                className="flex-1 flex items-center justify-center gap-2 py-2 px-4 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-md transition-colors disabled:bg-gray-800"
+                            >
+                                <UploadIcon /> {t('uploadImage')}
+                            </button>
+                            {uploadedImageData && (
+                                <button
+                                    onClick={() => setUploadedImageData(null)}
+                                    disabled={isGenerating}
+                                    className="py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-md transition-colors"
+                                >
+                                    {t('clearImage')}
+                                </button>
+                            )}
+                        </div>
+
                         <div>
                             <label htmlFor="video-prompt" className="block text-lg font-bold text-white mb-2">{t('videoPrompt')}</label>
                             <textarea
@@ -252,6 +298,21 @@ const ProductionStudio: React.FC<ProductionStudioProps> = ({ initialPanels, onPa
                                 <p>{generationError}</p>
                             </div>
                         )}
+
+                        <div className="space-y-2">
+                            <label htmlFor="video-model-select" className="block text-sm font-medium text-gray-300">{t('videoModel')}</label>
+                            <select
+                                id="video-model-select"
+                                value={selectedVideoModel}
+                                onChange={(e) => setSelectedVideoModel(e.target.value)}
+                                disabled={isGenerating}
+                                className="w-full bg-gray-900 border border-gray-700 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            >
+                                {VIDEO_MODELS.map(model => (
+                                    <option key={model} value={model}>{model}</option>
+                                ))}
+                            </select>
+                        </div>
                         
                         <button onClick={handleGenerateVideo} disabled={isGenerating || !editableVideoPrompt} className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-md transition-colors disabled:bg-orange-900 disabled:text-gray-400">
                            {selectedPanel.videoUrl ? <RefreshIcon className="h-5 w-5" /> : <FilmIcon />}

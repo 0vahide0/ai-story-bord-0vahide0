@@ -1,6 +1,11 @@
 export const TEXT_MODEL = 'gemini-2.5-flash';
 export const IMAGE_MODEL = 'imagen-3.0-generate-002';
 export const VIDEO_MODEL = 'veo-2.0-generate-001';
+export const VIDEO_MODELS = [
+    'veo-3.0-generate-preview',
+    'veo-3.0-fast-generate-preview',
+    'veo-2.0-generate-001'
+];
 export const TTS_MODEL = 'gemini-2.5-flash-preview-tts';
 export const MUSIC_MODEL = 'liria-2.0-generate-preview'; // Conceptual model
 

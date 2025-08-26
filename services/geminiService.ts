@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type, GenerateVideosOperation } from "@google/genai";
-import { StoryStructure, ImageAspectRatio } from '../types';
-import { TEXT_MODEL, IMAGE_MODEL, VIDEO_MODEL, TTS_MODEL } from '../constants';
+import { StoryStructure, ImageAspectRatio, ImageData } from '../types';
+import { TEXT_MODEL, IMAGE_MODEL, TTS_MODEL } from '../constants';
 
 // IMPORTANT: This check is for client-side environments where process.env might not be defined.
 // In a real production app, you'd handle this more robustly (e.g., server-side or build-time replacement).
@@ -82,17 +82,24 @@ export const generateImage = async (prompt: string, aspectRatio: ImageAspectRati
     return `data:image/jpeg;base64,${base64ImageBytes}`;
 };
 
-export const startVideoGeneration = async (prompt: string, promptTemplate: string): Promise<GenerateVideosOperation> => {
+export const startVideoGeneration = async (
+    prompt: string,
+    promptTemplate: string,
+    model: string,
+    image?: ImageData,
+): Promise<GenerateVideosOperation> => {
   const operation = await ai.models.generateVideos({
-    model: VIDEO_MODEL,
+    model: model,
     prompt: promptTemplate.replace('{{prompt}}', prompt),
+    image: image, // Pass the image data if it exists
     config: { numberOfVideos: 1 }
   });
   return operation;
 };
 
 export const checkVideoStatus = async (operation: GenerateVideosOperation) => {
-    const operationResult = await ai.operations.getVideosOperation({ operation: operation });
+    // The `get` method on the operation object itself is the modern way to poll.
+    const operationResult = await operation.get();
     return operationResult;
 };
 
