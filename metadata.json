@@ -1,0 +1,5 @@
+{
+  "name": "Storyboard AI",
+  "description": "An AI-powered application that transforms your raw ideas into a complete storyboard. It guides you through brainstorming, scriptwriting, image generation, and even video creation for each scene using Google's Gemini models.",
+  "requestFramePermissions": []
+}
