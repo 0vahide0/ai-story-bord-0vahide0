@@ -12,6 +12,7 @@ import LanguageSwitcher from './components/LanguageSwitcher';
 import { SystemPromptsProvider, useSystemPrompts } from './lib/SystemPromptsContext';
 import SystemPromptsSidebar from './components/SystemPromptsSidebar';
 
+const stepsOrder: AppStep[] = [AppStep.IDEA_INPUT, AppStep.STRUCTURE_EDITOR, AppStep.STORYBOARD_VIEW, AppStep.PRODUCTION_STUDIO];
 
 const AppContent: React.FC = () => {
   const { language } = useContext(LanguageContext);
@@ -19,6 +20,7 @@ const AppContent: React.FC = () => {
   const { prompts, setPromptsLanguage } = useSystemPrompts();
   
   const [currentStep, setCurrentStep] = useState<AppStep>(AppStep.IDEA_INPUT);
+  const [highestStep, setHighestStep] = useState<AppStep>(AppStep.IDEA_INPUT);
   const [storyStructure, setStoryStructure] = useState<StoryStructure | null>(null);
   const [storyboardPanels, setStoryboardPanels] = useState<StoryboardPanelData[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -51,6 +53,7 @@ const AppContent: React.FC = () => {
       }
       setStoryStructure(structure);
       setCurrentStep(AppStep.STRUCTURE_EDITOR);
+      setHighestStep(AppStep.STRUCTURE_EDITOR);
     } catch (err) {
       console.error(err);
       const errorMessage = err instanceof Error ? err.message : t('errorUnknown');
@@ -70,10 +73,12 @@ const AppContent: React.FC = () => {
     }));
     setStoryboardPanels(initialPanels);
     setCurrentStep(AppStep.STORYBOARD_VIEW);
+    setHighestStep(AppStep.STORYBOARD_VIEW);
   }, [t]);
   
   const handleProceedToProduction = useCallback(() => {
     setCurrentStep(AppStep.PRODUCTION_STUDIO);
+    setHighestStep(AppStep.PRODUCTION_STUDIO);
   }, []);
 
   const handleBackToIdea = () => {
@@ -84,10 +89,19 @@ const AppContent: React.FC = () => {
   
   const handleReset = () => {
     setCurrentStep(AppStep.IDEA_INPUT);
+    setHighestStep(AppStep.IDEA_INPUT);
     setStoryStructure(null);
     setStoryboardPanels([]);
     setError(null);
     setIsLoading(false);
+  };
+  
+  const handleStepClick = (step: AppStep) => {
+    const highestStepIndex = stepsOrder.indexOf(highestStep);
+    const targetStepIndex = stepsOrder.indexOf(step);
+    if (targetStepIndex <= highestStepIndex) {
+        setCurrentStep(step);
+    }
   };
 
   const renderContent = () => {
@@ -141,7 +155,11 @@ const AppContent: React.FC = () => {
             <h1 className="text-2xl font-bold tracking-tighter text-white">{t('appTitle')}</h1>
           </div>
           <div className="flex items-center gap-4">
-            <Stepper currentStep={currentStep} />
+            <Stepper 
+                currentStep={currentStep} 
+                highestStep={highestStep}
+                onStepClick={handleStepClick}
+            />
             <LanguageSwitcher />
             <button
                 onClick={() => setIsPromptsSidebarOpen(true)}

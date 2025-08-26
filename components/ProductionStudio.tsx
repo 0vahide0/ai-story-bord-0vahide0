@@ -45,7 +45,10 @@ const MusicAssistant: React.FC<{
 
     return (
         <div className="bg-gray-800/50 rounded-lg p-4 sticky top-28">
-            <h3 className="font-bold text-lg mb-4 flex items-center gap-2"><MusicIcon /> {t('musicAssistant')}</h3>
+            <div className="flex items-center gap-2 mb-4">
+                <h3 className="font-bold text-lg flex items-center gap-2"><MusicIcon /> {t('musicAssistant')}</h3>
+                <span className="text-xs bg-yellow-800 text-yellow-300 px-2 py-0.5 rounded-full font-mono uppercase tracking-wider">{t('previewFeature')}</span>
+            </div>
             <div className="space-y-4">
                 <div>
                     <label htmlFor="music-prompt" className="block text-sm font-medium text-gray-300 mb-1">{t('musicPrompt')}</label>
@@ -102,10 +105,11 @@ const ProductionStudio: React.FC<ProductionStudioProps> = ({ initialPanels, onPa
 
   useEffect(() => {
     if (selectedPanel) {
-      setEditableVideoPrompt(selectedPanel.imagePrompt || '');
+      const initialVideoPrompt = prompts.video.replace('{{prompt}}', selectedPanel.imagePrompt || '');
+      setEditableVideoPrompt(initialVideoPrompt);
       setIsGenerating(selectedPanel.status === 'video-generating');
     }
-  }, [selectedPanel]);
+  }, [selectedPanel, prompts.video]);
 
   const updatePanel = (panelId: string, updates: Partial<StoryboardPanelData>) => {
     const updatedPanels = panels.map(p => p.id === panelId ? { ...p, ...updates } : p);
@@ -139,7 +143,7 @@ const ProductionStudio: React.FC<ProductionStudioProps> = ({ initialPanels, onPa
     }, 4000);
 
     try {
-      let operation = await startVideoGeneration(editableVideoPrompt, prompts.video);
+      let operation = await startVideoGeneration(editableVideoPrompt);
       updatePanel(selectedPanelId, { videoOperation: operation });
 
       const poll = async () => {
@@ -185,7 +189,7 @@ const ProductionStudio: React.FC<ProductionStudioProps> = ({ initialPanels, onPa
         setGenerationError(errorMsg);
         updatePanel(selectedPanelId, { status: 'error', errorMessage: errorMsg });
     }
-  }, [selectedPanelId, editableVideoPrompt, updatePanel, prompts.video, t]);
+  }, [selectedPanelId, editableVideoPrompt, updatePanel, t]);
 
   return (
     <div className="animate-fade-in">

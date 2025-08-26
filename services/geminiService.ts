@@ -82,10 +82,10 @@ export const generateImage = async (prompt: string, aspectRatio: ImageAspectRati
     return `data:image/jpeg;base64,${base64ImageBytes}`;
 };
 
-export const startVideoGeneration = async (prompt: string, promptTemplate: string): Promise<GenerateVideosOperation> => {
+export const startVideoGeneration = async (prompt: string): Promise<GenerateVideosOperation> => {
   const operation = await ai.models.generateVideos({
     model: VIDEO_MODEL,
-    prompt: promptTemplate.replace('{{prompt}}', prompt),
+    prompt: prompt,
     config: { numberOfVideos: 1 }
   });
   return operation;
@@ -199,7 +199,7 @@ export const generateTTS = async (text: string, voice: string, promptTemplate: s
     });
     
     const audioPart = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-    if (!audioPart || !audioPart.inlineData) {
+    if (!audioPart || !audioPart.inlineData.data) {
         throw new Error("No audio data returned from API.");
     }
     const base64Pcm = audioPart.inlineData.data;
